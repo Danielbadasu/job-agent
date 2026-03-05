@@ -1,9 +1,12 @@
 import httpx
 import json
 import os
+import re
+import time
 from groq import Groq
+from config import GROQ_API_KEY
 
-client = Groq(api_key="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")
+client = Groq(api_key=GROQ_API_KEY)
 
 MY_PROFILE = """
 - 1.5 years experience as Data Analyst
@@ -53,23 +56,30 @@ Return ONLY valid JSON:
   "strong_matches": ["match1"]
 }}
 """
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        response_format={"type": "json_object"},
-        max_tokens=500
-    )
-    return json.loads(response.choices[0].message.content)
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            max_tokens=500
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        print(f"   ⚠️  Scoring error: {e}")
+        return {
+            "total": 0, "skill_score": 0, "tool_score": 0,
+            "experience_score": 0, "domain_score": 0,
+            "security_score": 0, "keyword_score": 0,
+            "decision": "ERROR", "reason": "scoring failed",
+            "missing_skills": [], "strong_matches": []
+        }
 
 
-# Test on companies
 companies = [
-    # Current
     "stripe", "cloudflare", "crowdstrike", "datadog", "elastic",
     "splunk", "coinbase", "okta", "pagerduty", "sentinelone",
     "intercom", "twilio", "amplitude", "mixpanel", "fivetran",
     "snowflake", "databricks", "asana", "hubspot",
-    # Add these
     "dropbox", "zoom", "box", "docusign", "zendesk",
     "gitlab", "hashicorp", "confluent", "dbt-labs", "airbyte",
     "retool", "hex", "mode", "sigma-computing", "lightdash",
@@ -89,7 +99,6 @@ EXCLUDE_TITLES = ["senior", "staff", "principal", "director", "manager",
                   "lead", "sr.", " ii", " iii", " iv", " 2", " 3",
                   "intern", "internship"]
 
-import re
 results = []
 
 for company in companies:
@@ -109,7 +118,6 @@ for company in companies:
             if not any(us in location for us in US_KEYWORDS):
                 continue
 
-            # Get full description
             job_id = j["id"]
             detail = httpx.get(
                 f"https://boards-api.greenhouse.io/v1/boards/{company}/jobs/{job_id}",
@@ -117,7 +125,9 @@ for company in companies:
             ).json()
             clean_text = re.sub(r'<[^>]+>', ' ', detail.get("content", ""))
 
-            # AI Score
+            # ── Small delay to avoid rate limits ──
+            time.sleep(2)
+
             score = smart_score(j["title"], clean_text, company)
             icon = "✅" if score["total"] >= 75 else "❌"
 
@@ -129,9 +139,16 @@ for company in companies:
             print(f"   Link: {j['absolute_url']}")
 
             if score["total"] >= 75:
-                results.append({**j, "score": score, "company": company})
+                results.append({**j, "score": score, "company": company,
+                                 "description": clean_text})
 
     except Exception:
         continue
 
 print(f"\n\n🎯 TOTAL PROCEED: {len(results)} jobs worth applying to")
+
+# Save for tailor engine
+with open("proceed_jobs.json", "w") as f:
+    json.dump(results, f, indent=2)
+
+print("💾 Saved to proceed_jobs.json")
