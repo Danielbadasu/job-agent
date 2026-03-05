@@ -1,28 +1,20 @@
 import json
-import subprocess
 import os
+from datetime import datetime
 from groq import Groq
-
 from config import GROQ_API_KEY
+from build_resume import build_resume_pdf, get_output_folder
+
 client = Groq(api_key=GROQ_API_KEY)
 
-# ── BASE RESUME DATA (frozen sections — never change these) ─────────────────
+APPLIED_JOBS_FILE = os.path.expanduser("~/applied_jobs.json")
+
 BASE = {
   "name": "Daniel Badasu",
   "contact": "Findlay, OH 45840  |  +1 (567) 294 2730  |  danielbadasu10@gmail.com",
   "education": [
-    {
-      "degree": "Master of Science, Applied Security & Data Analytics",
-      "school": "University of Findlay",
-      "location": "Findlay, OH, US",
-      "date": "12/2024"
-    },
-    {
-      "degree": "Bachelor of Science, Information and Communications Technology",
-      "school": "University of Winneba",
-      "location": "Accra, Ghana",
-      "date": "07/2019"
-    }
+    {"degree": "Master of Science, Applied Security & Data Analytics", "school": "University of Findlay", "location": "Findlay, OH, US", "date": "12/2024"},
+    {"degree": "Bachelor of Science, Information and Communications Technology", "school": "University of Winneba", "location": "Accra, Ghana", "date": "07/2019"}
   ],
   "certifications": [
     "Google Data Analytics Professional – Google",
@@ -30,8 +22,6 @@ BASE = {
     "AWS Cloud Essentials – Amazon Web Services",
     "Cisco Cyber Threat Management – Cisco"
   ],
-
-  # ── THESE GET TAILORED PER JOB ──
   "summary": "Data Analyst focused on building financial and operational reporting functions from the ground up by bridging data gaps between departments. I specialize in developing automated Power BI dashboards and optimizing SQL workflows to transform raw datasets into strategic assets. I thrive in high-growth environments, acting as a technical partner to leadership by eliminating manual bottlenecks and delivering 99.9% accurate insights that drive scalable growth.",
   "skills": [
     "Data Analysis, Data Mining & Reporting",
@@ -97,152 +87,113 @@ COMPANY: {company}
 JOB DESCRIPTION:
 {job_description}
 
-Return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON:
 {{
   "summary": "tailored 3-sentence summary",
   "skills": ["skill1", "skill2", "...all 12 skills reordered by relevance"],
   "experience": [
-    {{
-      "title": "Data Analyst",
-      "company": "The Concrete Protector",
-      "location": "Lima, Ohio, US",
-      "dates": "3/2025 – Present",
-      "bullets": ["most relevant bullet first", "...all 5 bullets reworded and reordered"]
-    }},
-    {{
-      "title": "Data Analyst",
-      "company": "Prempeh Consulting, CPAs",
-      "location": "Washington DC, US",
-      "dates": "07/2023 – 01/2025",
-      "bullets": ["most relevant bullet first", "...all 4 bullets reworded and reordered"]
-    }}
+    {{"title": "Data Analyst", "company": "The Concrete Protector", "location": "Lima, Ohio, US", "dates": "3/2025 – Present", "bullets": ["bullet1", "bullet2", "bullet3", "bullet4", "bullet5"]}},
+    {{"title": "Data Analyst", "company": "Prempeh Consulting, CPAs", "location": "Washington DC, US", "dates": "07/2023 – 01/2025", "bullets": ["bullet1", "bullet2", "bullet3", "bullet4"]}}
   ]
 }}
 """
 
-def tailor_for_job(job: dict) -> dict:
-    """Call Groq to tailor resume content for a specific job"""
+def load_applied_jobs():
+    if os.path.exists(APPLIED_JOBS_FILE):
+        with open(APPLIED_JOBS_FILE) as f:
+            return json.load(f)
+    return {}
 
-    base_text = json.dumps({
-        "summary": BASE["summary"],
-        "skills": BASE["skills"],
-        "experience": BASE["experience"]
-    }, indent=2)
+def save_applied_jobs(applied):
+    with open(APPLIED_JOBS_FILE, "w") as f:
+        json.dump(applied, f, indent=2)
 
+def is_duplicate(job, applied):
+    url = job.get("url", "")
+    if url in applied:
+        seen_date = datetime.strptime(applied[url], "%Y-%m-%d")
+        days_ago = (datetime.now() - seen_date).days
+        if days_ago < 60:
+            print(f"   ⏭️  Skipping — seen {days_ago} days ago")
+            return True
+    return False
+
+def safe_filename(company, title):
+    def clean(s):
+        for ch in [" ", ",", ".", "/", "&", "(", ")", "-"]:
+            s = s.replace(ch, "_")
+        return s.strip("_")
+    return f"{clean(company)}_{clean(title)}"
+
+def tailor_for_job(job):
+    base_text = json.dumps({"summary": BASE["summary"], "skills": BASE["skills"], "experience": BASE["experience"]}, indent=2)
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{
-            "role": "user",
-            "content": TAILOR_PROMPT.format(
-                base_resume=base_text,
-                job_title=job["title"],
-                company=job["company"],
-                job_description=job["description"][:3500]
-            )
-        }],
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": TAILOR_PROMPT.format(
+            base_resume=base_text,
+            job_title=job["title"],
+            company=job["company"],
+            job_description=job["description"][:3500]
+        )}],
         response_format={"type": "json_object"},
         max_tokens=2000
     )
-
     tailored = json.loads(response.choices[0].message.content)
-
-    # Merge tailored content with frozen sections
-    full_resume = {
-        **BASE,
-        "summary": tailored["summary"],
-        "skills": tailored["skills"],
-        "experience": tailored["experience"]
-    }
-
-    return full_resume
-
-
-def generate_pdf(resume_data: dict, company: str) -> str:
-    """Generate tailored resume as PDF — docx is temp, only PDF is kept"""
-
-    os.makedirs("tailored_resumes", exist_ok=True)
-
-    safe_company = company.replace(" ", "_").replace(",", "").replace(".", "")
-    docx_path = f"tailored_resumes/Daniel_Badasu_{safe_company}_DA.docx"
-    pdf_path  = f"tailored_resumes/Daniel_Badasu_{safe_company}_DA.pdf"
-    json_path = "temp_resume.json"
-
-    # Step 1 — Save resume data as JSON for Node to read
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(resume_data, f, indent=2, ensure_ascii=False)
-
-    # Step 2 — Call Node.js to generate .docx
-    result = subprocess.run(
-        ["node", "build_resume_v2.js", json_path, docx_path],
-        capture_output=True, text=True
-    )
-
-    if result.returncode != 0:
-        print(f"   ❌ Node error: {result.stderr}")
-        return None
-
-    # Step 3 — Convert .docx to .pdf using Microsoft Word
-    convert(docx_path, pdf_path)
-
-    # Step 4 — Clean up temp files
-    if os.path.exists(docx_path):
-        os.remove(docx_path)
-    if os.path.exists(json_path):
-        os.remove(json_path)
-
-    print(f"   ✅ PDF ready: {pdf_path}")
-    return pdf_path
-
+    return {**BASE, "summary": tailored["summary"], "skills": tailored["skills"], "experience": tailored["experience"]}
 
 def run_tailoring():
-    """Main runner — tailor and generate PDF resume for every matched job"""
-
     with open("proceed_jobs.json") as f:
         jobs = json.load(f)
 
-    print(f"\n📋 Tailoring resumes for {len(jobs)} jobs...\n")
-    print("=" * 55)
+    applied = load_applied_jobs()
+    output_folder = get_output_folder()
+
+    print(f"\n📋 Processing {len(jobs)} matched jobs...")
+    print(f"📁 Output: {output_folder}\n{'='*55}")
 
     results = []
+    skipped = 0
 
     for job in jobs:
-        print(f"\n🔄 {job['company'].upper()} — {job['title']}")
+        print(f"\n🔍 {job['company'].upper()} — {job['title']}")
 
-        # AI tailoring
+        if is_duplicate(job, applied):
+            skipped += 1
+            continue
+
         tailored_data = tailor_for_job(job)
 
-        # Generate PDF
-        pdf_path = generate_pdf(tailored_data, job["company"])
+        file_slug = safe_filename(job["company"], job["title"])
+        pdf_path  = os.path.join(output_folder, f"Daniel_Badasu_{file_slug}.pdf")
 
-        if pdf_path:
-            results.append({
-                "company": job["company"],
-                "title": job["title"],
-                "url": job["url"],
-                "score": job["score"]["total"],
-                "resume_pdf": pdf_path,
-                "cover_letter_pdf": ""  # will be filled by cover_letter_gen.py
-            })
-            print(f"   Score:  {job['score']['total']}%")
-            print(f"   Apply:  {job['url']}")
+        build_resume_pdf(tailored_data, pdf_path)
+        print(f"   ✅ Resume saved")
 
-    # Final summary
-    print(f"\n{'=' * 55}")
-    print(f"✅ {len(results)} tailored PDF resumes ready!")
-    print(f"{'=' * 55}\n")
+        applied[job["url"]] = datetime.now().strftime("%Y-%m-%d")
 
-    for r in results:
-        print(f"  {r['score']}% — {r['company']} | {r['title']}")
-        print(f"  PDF:    {r['resume_pdf']}")
-        print(f"  Apply:  {r['url']}\n")
+        results.append({
+            "company": job["company"],
+            "title": job["title"],
+            "url": job["url"],
+            "score": job["score"]["total"],
+            "resume_pdf": pdf_path,
+            "cover_letter_pdf": "",
+            "output_folder": output_folder,
+            "file_slug": file_slug
+        })
+        print(f"   Score: {job['score']['total']}%  |  Apply: {job['url']}")
 
-    # Save to application queue for cover letter gen + final review
+    save_applied_jobs(applied)
+
+    print(f"\n{'='*55}")
+    print(f"✅ {len(results)} new resumes ready!")
+    if skipped:
+        print(f"⏭️  {skipped} duplicate jobs skipped")
+    print(f"{'='*55}\n")
+
     with open("application_queue.json", "w") as f:
         json.dump(results, f, indent=2)
-
-    print("💾 Saved to application_queue.json")
-    print("➡️  Next: run cover_letter_gen.py to generate cover letters\n")
-
+    print("💾 Saved to application_queue.json\n")
 
 if __name__ == "__main__":
     run_tailoring()
