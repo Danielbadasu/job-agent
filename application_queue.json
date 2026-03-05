@@ -1,0 +1,74 @@
+[
+  {
+    "company": "dropbox",
+    "title": "People Team Data Analyst, Talent Acquisition",
+    "url": "https://jobs.dropbox.com/listing/7536371?gh_jid=7536371",
+    "score": 92,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_dropbox_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_gitlab.pdf"
+  },
+  {
+    "company": "gitlab",
+    "title": "Enablement Data and Reporting Analyst - US Remote",
+    "url": "https://job-boards.greenhouse.io/gitlab/jobs/8369681002",
+    "score": 92,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_gitlab_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_elastic.pdf"
+  },
+  {
+    "company": "dropbox",
+    "title": "People Team Data Analyst, Talent Acquisition",
+    "url": "https://jobs.dropbox.com/listing/7536374?gh_jid=7536374",
+    "score": 82,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_dropbox_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_dropbox.pdf"
+  },
+  {
+    "company": "stripe",
+    "title": "Strategy & Operations Analyst, Customer Success",
+    "url": "https://stripe.com/jobs/search?gh_jid=7397878",
+    "score": 82,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_stripe_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_dropbox.pdf"
+  },
+  {
+    "company": "elastic",
+    "title": "Business Intelligence & Insights Analyst (Marketing Analytics)",
+    "url": "https://jobs.elastic.co/jobs?gh_jid=7648141&gh_jid=7648141",
+    "score": 82,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_elastic_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_stripe.pdf"
+  },
+  {
+    "company": "chime",
+    "title": "Data Analyst, Lending",
+    "url": "https://boards.greenhouse.io/chime/jobs/8365502002?gh_jid=8365502002",
+    "score": 78,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_chime_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_stripe.pdf"
+  },
+  {
+    "company": "stripe",
+    "title": "Risk Operations Analyst",
+    "url": "https://stripe.com/jobs/search?gh_jid=7230921",
+    "score": 78,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_stripe_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_chime.pdf"
+  },
+  {
+    "company": "stripe",
+    "title": "Risk Operations Analyst, Financial Crimes",
+    "url": "https://stripe.com/jobs/search?gh_jid=7430296",
+    "score": 78,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_stripe_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_stripe.pdf"
+  },
+  {
+    "company": "mixpanel",
+    "title": "Sales Operations Analyst",
+    "url": "https://job-boards.greenhouse.io/mixpanel/jobs/7475882",
+    "score": 75,
+    "resume_pdf": "tailored_resumes/Daniel_Badasu_mixpanel_DA.pdf",
+    "cover_letter_pdf": "tailored_resumes/CoverLetter_Daniel_Badasu_mixpanel.pdf"
+  }
+]
