@@ -2,7 +2,6 @@ import json
 import subprocess
 import os
 from groq import Groq
-from docx2pdf import convert
 
 from config import GROQ_API_KEY
 client = Groq(api_key=GROQ_API_KEY)
