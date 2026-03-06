@@ -108,9 +108,13 @@ def save_applied_jobs(applied):
     with open(APPLIED_JOBS_FILE, "w") as f:
         json.dump(applied, f, indent=2)
 
+def get_job_url(job):
+    """Safely extract job URL from any common key name."""
+    return job.get("url") or job.get("link") or job.get("apply_url") or job.get("job_url") or ""
+
 def is_duplicate(job, applied):
-    url = job.get("url", "")
-    if url in applied:
+    url = get_job_url(job)
+    if url and url in applied:
         seen_date = datetime.strptime(applied[url], "%Y-%m-%d")
         days_ago = (datetime.now() - seen_date).days
         if days_ago < 60:
@@ -169,19 +173,21 @@ def run_tailoring():
         build_resume_pdf(tailored_data, pdf_path)
         print(f"   ✅ Resume saved")
 
-        applied[job["url"]] = datetime.now().strftime("%Y-%m-%d")
+        job_url = get_job_url(job)
+        if job_url:
+            applied[job_url] = datetime.now().strftime("%Y-%m-%d")
 
         results.append({
             "company": job["company"],
             "title": job["title"],
-            "url": job["url"],
+            "url": job_url,
             "score": job["score"]["total"],
             "resume_pdf": pdf_path,
             "cover_letter_pdf": "",
             "output_folder": output_folder,
             "file_slug": file_slug
         })
-        print(f"   Score: {job['score']['total']}%  |  Apply: {job['url']}")
+        print(f"   Score: {job['score']['total']}%  |  Apply: {job_url}")
 
     save_applied_jobs(applied)
 
