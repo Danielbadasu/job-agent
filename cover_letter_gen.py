@@ -32,6 +32,10 @@ Return ONLY valid JSON:
 {{"cover_letter_paragraphs": ["para1", "para2", "para3"], "subject_line": "Application for {job_title} — Daniel Badasu"}}
 """
 
+def get_job_url(job):
+    """Safely extract job URL from any common key name."""
+    return job.get("url") or job.get("link") or job.get("apply_url") or job.get("job_url") or ""
+
 def generate_cover_letter(job):
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
@@ -51,18 +55,15 @@ def run():
     with open("application_queue.json") as f:
         queue = json.load(f)
 
-    # Build a lookup from url -> queue item for safe matching
-    queue_by_url = {item["url"]: item for item in queue}
-
     print(f"\n✉️  Generating cover letters for {len(queue)} jobs...\n{'='*55}")
 
     updated_queue = []
 
     for item in queue:
-        job_url = item["url"]
+        job_url = get_job_url(item)
 
         # Find matching job description from proceed_jobs.json
-        job = next((j for j in jobs if j["url"] == job_url), None)
+        job = next((j for j in jobs if get_job_url(j) == job_url), None)
         if not job:
             updated_queue.append(item)
             continue
@@ -72,7 +73,6 @@ def run():
         content = generate_cover_letter(job)
         paragraphs = content.get("cover_letter_paragraphs", [])
 
-        # Use same file_slug as resume for perfect matching
         file_slug     = item.get("file_slug", item["company"])
         output_folder = item.get("output_folder", os.path.expanduser("~/tailored_resumes"))
         pdf_path      = os.path.join(output_folder, f"CoverLetter_Daniel_Badasu_{file_slug}.pdf")
