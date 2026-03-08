@@ -78,6 +78,8 @@ STRICT RULES:
 6. Reorder skills list — most relevant to this job comes first
 7. Summary must be 3 sentences max, mirror the job's language
 8. Sound human, not robotic
+9. Return EXACTLY 3 bullets for The Concrete Protector — pick the 3 most relevant to this role
+10. Return EXACTLY 4 bullets for Prempeh Consulting, CPAs — pick the 4 most relevant to this role
 
 CANDIDATE BASE RESUME:
 {base_resume}
@@ -92,7 +94,7 @@ Return ONLY valid JSON:
   "summary": "tailored 3-sentence summary",
   "skills": ["skill1", "skill2", "...all 12 skills reordered by relevance"],
   "experience": [
-    {{"title": "Data Analyst", "company": "The Concrete Protector", "location": "Lima, Ohio, US", "dates": "3/2025 – Present", "bullets": ["bullet1", "bullet2", "bullet3", "bullet4", "bullet5"]}},
+    {{"title": "Data Analyst", "company": "The Concrete Protector", "location": "Lima, Ohio, US", "dates": "3/2025 – Present", "bullets": ["bullet1", "bullet2", "bullet3"]}},
     {{"title": "Data Analyst", "company": "Prempeh Consulting, CPAs", "location": "Washington DC, US", "dates": "07/2023 – 01/2025", "bullets": ["bullet1", "bullet2", "bullet3", "bullet4"]}}
   ]
 }}
