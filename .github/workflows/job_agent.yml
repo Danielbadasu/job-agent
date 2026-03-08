@@ -1,45 +1,32 @@
 name: Job Agent Daily Run
-
 on:
   schedule:
-    - cron: '0 12 * * *'  # Every day at 12:00 UTC = 7:00 AM Ohio time
-  workflow_dispatch:        # Also allows manual trigger from GitHub
-
+    - cron: '0 12 * * *'
+  workflow_dispatch:
 jobs:
   run-job-agent:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install dependencies
         run: |
           pip install groq httpx python-dotenv reportlab
-
       - name: Create .env file from secrets
         run: |
           echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
           echo "GMAIL_USER=${{ secrets.GMAIL_USER }}" >> .env
           echo "GMAIL_PASSWORD=${{ secrets.GMAIL_PASSWORD }}" >> .env
           echo "NOTIFY_EMAIL=${{ secrets.NOTIFY_EMAIL }}" >> .env
-
       - name: Run job scraper
         run: python3 multi_scraper.py
-
-      - name: Run AI scorer
-        run: python3 smart_scorer.py
-
       - name: Run resume tailor
         run: python3 tailor_engine.py
-
       - name: Run cover letter generator
         run: python3 cover_letter_gen.py
-
       - name: Send email report
         run: python3 email_notifier.py
